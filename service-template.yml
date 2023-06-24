@@ -2,7 +2,7 @@ id: SshReverseTunnel-${TunnelName}
 name: "OpenSSH Reverse Tunnel: ${TunnelName}"
 description: "OpenSSH Reverse Tunnel: ${TunnelName}"
 startMode: Automatic
-serviceDependencies:
+depend:
   - sshd
 executable: '%SystemRoot%\System32\OpenSSH\ssh.exe'
 arguments:     -F %ProgramData%\SshReverseTunnel\config -o BatchMode=yes -vNT ${TunnelName}
