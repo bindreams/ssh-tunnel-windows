@@ -58,9 +58,7 @@ def pwsh_query(command: str):
 
 
 def filehash(path):
-    # BUF_SIZE is totally arbitrary, change for your app!
-    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
-
+    BUF_SIZE = 65536  # Recommended as a good default for Windows
     sha256 = hashlib.sha256()
 
     with open(path, 'rb') as f:
