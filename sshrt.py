@@ -105,7 +105,7 @@ def setpermissions(path, *, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
     run(command)
 
 
-def ensurefile(path, *, directory=False, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
+def ensurefile(path, *, contents: bytes = None, directory=False, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
     """Ensure that a file exists and has permissions set."""
     path = Path(path)
     if path.exists():
@@ -114,11 +114,22 @@ def ensurefile(path, *, directory=False, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
         elif not path.is_file() and directory == False:
             raise RuntimeError("Path \"path\" exists but is not a directory.")
     elif directory == False:
-        path.touch()
+        if contents is not None:
+            with open(path, "wb") as f:
+                f.write(contents)
+        else:
+            path.touch()
     else:
-        path.mkdir(exist_ok=True)
+        if contents is not None:
+            raise ValueError("cannot specify contents together with directory=True")
+
+        path.mkdir()
 
     setpermissions(path, sids=sids)
+
+
+def ensuredir(path, *, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
+    return ensurefile(path, directory=True, sids=sids)
 
 
 def fix_permissions(path):
@@ -245,28 +256,28 @@ def bootstrap(entry_shell=None):
         run(["curl", "-L", "https://download.sysinternals.com/files/PSTools.zip", "-o", tempdir / "PSTools.zip"])
         with ZipFile(tempdir / "PSTools.zip", "r") as zf:
             zf.extract("PsExec64.exe", bindir)
-        (tempdir / "PSTools.zip").unlink()
+        shutil.rmtree(tempdir)
 
-        programdata = os.getenv("ProgramData")
+        programdata = Path(os.getenv("ProgramData"))
+        sshdir = programdata / "ssh"
+        sshrtdir = programdata / "SshReverseTunnel"
 
         log("Generating host SSH keys")
         run(sudo + ["ssh-keygen", "-A"])
-        for hostkey in Path(f"{programdata}/ssh").glob("ssh_host_*"):
+        for hostkey in sshdir.glob("ssh_host_*"):
             setpermissions(hostkey)
 
         log("Creating necessary files")
-        ensurefile(f"{programdata}\\ssh\\administrators_authorized_keys")
-        ensurefile(f"{programdata}\\ssh\\ssh_known_hosts", sids=[SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE])
+        sshrt_sids = {SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE}
+        ensurefile(sshdir / "administrators_authorized_keys")
+        ensurefile(sshdir / "ssh_known_hosts", sids=sshrt_sids)
 
-        ensurefile(f"{programdata}\\SshReverseTunnel", directory=True)
-        ensurefile(f"{programdata}\\SshReverseTunnel\\services", directory=True,
-                   sids=[SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE])
-        ensurefile(f"{programdata}\\SshReverseTunnel\\logs", directory=True,
-                   sids=[SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE])
-        ensurefile(f"{programdata}\\SshReverseTunnel\\config", sids=[
-                   SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE])
-        ensurefile(f"{programdata}\\SshReverseTunnel\\config.d", directory=True,
-                   sids=[SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE])
+        ensuredir(sshrtdir)
+        ensuredir(sshrtdir / "services", sids=sshrt_sids)
+        ensuredir(sshrtdir / "logs", sids=sshrt_sids)
+        ensuredir(sshrtdir / "config.d", sids=sshrt_sids)
+        ensurefile(sshrtdir / "config", sids=sshrt_sids,
+                   contents=b"Include __PROGRAMDATA__/SshReverseTunnel/config.d/*\n")
 
         log("Starting OpenSSH Server")
         pwsh("Start-Service -Name sshd")
