@@ -196,7 +196,6 @@ def bootstrap(entry_shell=None):
         log("Installing system OpenSSH")
         pwsh("Add-WindowsCapability -Online -Name OpenSSH.Client")
         pwsh("Add-WindowsCapability -Online -Name OpenSSH.Server")
-        pwsh("Set-Service -Name sshd -StartupType Automatic")
 
         firewall_rule_query = pwsh_query("(Get-NetFirewallRule -Name \"OpenSSH-Server-In-TCP\").Enabled")
         if firewall_rule_query.returncode != 0:
@@ -261,6 +260,10 @@ def bootstrap(entry_shell=None):
                    SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE])
         ensurefile(f"{programdata}\\SshReverseTunnel\\config.d", directory=True,
                    sids=[SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE])
+
+        log("Starting OpenSSH Server")
+        pwsh("Start-Service -Name sshd")
+        pwsh("Set-Service -Name sshd -StartupType Automatic")
 
     except subprocess.CalledProcessError:
         return 1
