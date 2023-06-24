@@ -37,7 +37,7 @@ def run(command, **kwargs):
 
 def pwsh(command: str):
     print(f"{Fore.WHITE}{Style.BRIGHT}+ {command}")
-    command_with_erroraction = f"$ErrorActionPreference = \"Stop\"; {command}"
+    command_with_erroraction = f"$ErrorActionPreference = \"Stop\"\n{command}"
     encoded_command = base64.b64encode(command_with_erroraction.encode("UTF-16LE"))
     try:
         return subprocess.run(["powershell.exe", "-EncodedCommand", encoded_command], check=True)
@@ -48,7 +48,7 @@ def pwsh(command: str):
 
 def pwsh_query(command: str):
     print(f"{Fore.WHITE}{Style.BRIGHT}+ {command}")
-    command_with_erroraction = f"$ErrorActionPreference = \"Stop\"; {command}"
+    command_with_erroraction = f"$ErrorActionPreference = \"Stop\"\n{command}"
     encoded_command = base64.b64encode(command_with_erroraction.encode("UTF-16LE"))
     try:
         return subprocess.run(["powershell.exe", "-EncodedCommand", encoded_command], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -131,8 +131,6 @@ def ensuredir(path, *, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
 
 
 def fix_permissions(path):
-    path = Path(path)
-
     try:
         setpermissions(path, sids=[SID_SYSTEM, SID_NETWORK_SERVICE, SID_ADMINISTRATORS])
     except subprocess.CalledProcessError:
