@@ -84,6 +84,8 @@ Explanation:
 - `ServerAliveInterval`: How often (in seconds) SSH will send a packet to check whether the connection is working. This is very important: without this config option the tunnel will never restart.
 - `ServerAliveCountMax`: How many alive-packets need to fail before the tunnel is considered dead and the process terminates (or, in our case, restarts). In the example above machine A sends a packet every 10 seconds and restarts after 3 failed packets, so the maximum amount of time between a connection failure and restart is 10*3=30 seconds.
 
+**Important:** If you indeed use your tunnel for SSH connections, you may need to update some settings on machine B as well. See [troubleshooting/ssh connection hangs](#ssh-connection-hangs-with-no-output--error-remote-port-forwarding-failed-for-listen-port-port) for more information.
+
 Since the config file will be used by a system user called `NT AUTHORITY\NETWORK SERVICE`, you need to make sure that the config file has correct permissions for this. `sshrt` has a subcommand `fix-permissions` for this. For example:
 ```powershell
 python -m sshrt fix-permissions "${env:ProgramData}/SshReverseTunnel/config.d/MachineB.config.txt"
@@ -185,6 +187,27 @@ SSH server on the remote machine did not accept your key. You may need to look h
   ```powershell
   python -m sshrt fix-permissions <your-keyfile>
   ```
+
+### Failing after the service is installed
+#### SSH connection hangs with no output / Error: remote port forwarding failed for listen port `port`
+When using an SSH tunnel to make SSH connection from machine B to machine A, it's important to configure the SSH Server on machine B so that it terminates "zombie" connections where the remote (machine A) was disconnected without telling (such as during a reboot).
+
+Restart your ssh connection with `-vvv` and verify that it hangs on these console messages:
+```
+debug1: Connection established.
+debug1: identity file /root/.ssh/temp.id type 0
+debug1: identity file /root/.ssh/temp.id-cert type -1
+debug1: Local version string ...
+```
+If yes, it means the connection is a zombie connection. The tunnel was created, but there's no one on the other side.
+
+You need to add settings that will make SSHD send heartbeat packets, similar to `ServerAliveInterval` but the going the opposite direction. Add the following lines to `/etc/ssh/sshd_config` on Linux or `%ProgramData%/ssh/sshd_config` on Windows:
+```
+ClientAliveInterval 10
+ClientAliveCountMax 3
+TCPKeepAlive yes
+```
+The first two entries directly mirror `ServerAliveInterval` and `ServerAliveCountMax`, so in this case the delay between a dead connection and a killed off process is 10*3=30 seconds. The latter, `TCPKeepAlive` uses a different mechanism that can be omitted if you'd like. Consult [`man sshd_config`](https://linux.die.net/man/5/sshd_config) for more information.
 
 ## License
 
