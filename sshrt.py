@@ -89,13 +89,21 @@ sudo = [bindir / "PsExec64.exe", "-nobanner", "-accepteula", "-s"]
 
 
 def setpermissions(path, *, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
-    run(sudo + ["takeown", "/A", "/F", path])  # Administrators own this
-    run(sudo + ["icacls.exe", path, "/reset"])
-    run(sudo + ["icacls.exe", path, "/inheritance:r"])
+    path = Path(path)
+
+    run(sudo + ["takeown", "/A", "/F", path])  # Administrators group own this
+    run(["icacls.exe", path, "/reset"])
 
     # Set correct permissions
+    permissions = "F"
+    if path.is_dir():
+        permissions = "(OI)(CI)F"
+
+    command = ["icacls.exe", path, "/inheritance:r"]
     for sid in sids:
-        run(sudo + ["icacls.exe", path, "/inheritance:r", "/grant", f"*{sid}:F"])
+        command += ["/grant", f"*{sid}:{permissions}"]
+
+    run(command)
 
 
 def ensurefile(path, *, directory=False, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
