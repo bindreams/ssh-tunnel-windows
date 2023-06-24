@@ -278,7 +278,7 @@ def bootstrap(entry_shell=None):
         run(["curl", "-L", "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe", "-o", files.winsw])
         run(["curl", "-L", "https://download.sysinternals.com/files/PSTools.zip", "-o", dirs.temp / "PSTools.zip"])
         with ZipFile(dirs.temp / "PSTools.zip", "r") as zf:
-            with zf.open("/PsExec64.exe", "r") as src, open(files.psexec, "wb") as dst:
+            with zf.open("PsExec64.exe", "r") as src, open(files.psexec, "wb") as dst:
                 shutil.copyfileobj(src, dst)
         shutil.rmtree(dirs.temp)
 
