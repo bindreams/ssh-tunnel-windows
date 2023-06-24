@@ -187,7 +187,8 @@ SSH server on the remote machine did not accept your key. You may need to look h
   ```
 
 ## License
-<img style="float: right;" src="https://www.gnu.org/graphics/gplv3-with-text-136x68.png">
+
+<img align="right" src="https://www.gnu.org/graphics/gplv3-with-text-136x68.png">
 
 This project is licensed under the [GNU GPL version 3.0](/LICENSE.md), which means it is free for you to use. You have no requirements to open-source anything if you use these scripts, not your ansible configs, not your Dockerfiles, unless:
 1. You modify these scripts;
