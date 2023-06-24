@@ -227,19 +227,19 @@ def bootstrap(entry_shell=None):
             pwsh(
                 f"New-ItemProperty -Path \"HKLM:\\SOFTWARE\\OpenSSH\" -Name DefaultShell -Value \"{entry_shell_path}\" -PropertyType String -Force")
 
-        # log("Downloading dependencies")
-        # if bindir.exists():
-        #     shutil.rmtree(bindir)
-        # if tempdir.exists():
-        #     shutil.rmtree(tempdir)
-        # bindir.mkdir(parents=True, exist_ok=True)
-        # tempdir.mkdir(parents=True, exist_ok=True)
+        log("Downloading dependencies")
+        if bindir.exists():
+            shutil.rmtree(bindir)
+        if tempdir.exists():
+            shutil.rmtree(tempdir)
+        bindir.mkdir(parents=True, exist_ok=True)
+        tempdir.mkdir(parents=True, exist_ok=True)
 
-        # run(["curl", "-L", "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe", "-o", bindir / "WinSW.exe"])
-        # run(["curl", "-L", "https://download.sysinternals.com/files/PSTools.zip", "-o", tempdir / "PSTools.zip"])
-        # with ZipFile(tempdir / "PSTools.zip", "r") as zf:
-        #     zf.extract("PsExec64.exe", bindir)
-        # (tempdir / "PSTools.zip").unlink()
+        run(["curl", "-L", "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe", "-o", bindir / "WinSW.exe"])
+        run(["curl", "-L", "https://download.sysinternals.com/files/PSTools.zip", "-o", tempdir / "PSTools.zip"])
+        with ZipFile(tempdir / "PSTools.zip", "r") as zf:
+            zf.extract("PsExec64.exe", bindir)
+        (tempdir / "PSTools.zip").unlink()
 
         programdata = os.getenv("ProgramData")
 
