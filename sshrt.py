@@ -8,18 +8,38 @@ import subprocess
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
+from types import SimpleNamespace
 from zipfile import ZipFile
 
 import colorama
 import yaml
 from colorama import Fore, Style
 
-isadmin = ctypes.windll.shell32.IsUserAnAdmin() != 0
-dir = Path(__file__).parent
-bindir = dir / "bin"
-tempdir = dir / "temp"
+# Static data ==========================================================================================================
+dirs = SimpleNamespace()
+dirs.repo = Path(__file__).parent
+dirs.programdata = Path(os.getenv("ProgramData", "C:/ProgramData"))
+dirs.root = dirs.programdata / "SshReverseTunnel"
+dirs.ssh = dirs.programdata / "ssh"
+dirs.configs = dirs.root / "config.d"
+dirs.services = dirs.root / "services"
+dirs.logs = dirs.root / "logs"
+dirs.temp = dirs.repo / "temp"
+dirs.bin = dirs.repo / "bin"
 
+files = SimpleNamespace()
+files.winsw = dirs.bin / "WinSW.exe"
+files.psexec = dirs.bin / "PsExec64.exe"
+files.authorized_keys = dirs.ssh / "administrators_authorized_keys"
+files.known_hosts = dirs.ssh / "ssh_known_hosts"
+files.config = dirs.root / "config"
 
+sids = SimpleNamespace()
+sids.administrators = "S-1-5-32-544"
+sids.system = "S-1-5-18"
+sids.network_service = "S-1-5-20"
+
+# Run shell commands ===================================================================================================
 def run(command, **kwargs):
     kwargs["check"] = kwargs.get("check", True)
     if isinstance(command, list):
@@ -31,8 +51,13 @@ def run(command, **kwargs):
     try:
         return subprocess.run(command, **kwargs)
     except subprocess.CalledProcessError:
-        print(f"sshtunnel failed while running: {display_command}")
+        error(f"Script failed while running: {display_command}")
         raise
+
+
+def sudo(command, **kwargs):
+    """Run a command as `NT AUTHORITY\SYSTEM`."""
+    return run([files.psexec, "-nobanner", "-accepteula", "-s"] + command, **kwargs)
 
 
 def pwsh(command: str):
@@ -42,21 +67,35 @@ def pwsh(command: str):
     try:
         return subprocess.run(["powershell.exe", "-EncodedCommand", encoded_command], check=True)
     except subprocess.CalledProcessError:
-        print(f"sshtunnel failed while running: {command}")
+        error(f"Script failed while running: {command}")
         raise
 
 
 def pwsh_query(command: str):
+    """Same as pwsh() but does not throw on error and pipes stdout/stderr to inspect after."""
     print(f"{Fore.WHITE}{Style.BRIGHT}+ {command}")
     command_with_erroraction = f"$ErrorActionPreference = \"Stop\"\n{command}"
     encoded_command = base64.b64encode(command_with_erroraction.encode("UTF-16LE"))
     try:
-        return subprocess.run(["powershell.exe", "-EncodedCommand", encoded_command], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return subprocess.run(
+            ["powershell.exe", "-EncodedCommand", encoded_command],
+            check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
     except subprocess.CalledProcessError:
-        print(f"sshtunnel failed while running: {command}")
+        error(f"Script failed while running: {command}")
         raise
 
 
+# Report messages ======================================================================================================
+def log(message):
+    print(f"{Fore.CYAN}{Style.BRIGHT}# {message}")
+
+
+def error(message):
+    print(f"{Fore.RED}{Style.BRIGHT}# {message}")
+
+
+# Utility functions ====================================================================================================
 def filehash(path):
     BUF_SIZE = 65536  # Recommended as a good default for Windows
     sha256 = hashlib.sha256()
@@ -71,24 +110,15 @@ def filehash(path):
     return sha256.hexdigest()
 
 
-def log(message):
-    print(f"{Fore.CYAN}{Style.BRIGHT}# {message}")
+def setpermissions(path, *, extrasids=None):
+    if isinstance(extrasids, str):
+        extrasids = {extrasids}
+    extrasids = extrasids or set()
+    extrasids |= {sids.system, sids.administrators}  # Always add SYSTEM and Administrators to the list
 
-
-def error(message):
-    print(f"{Fore.RED}{Style.BRIGHT}# {message}")
-
-
-SID_ADMINISTRATORS = "S-1-5-32-544"
-SID_SYSTEM = "S-1-5-18"
-SID_NETWORK_SERVICE = "S-1-5-20"
-sudo = [bindir / "PsExec64.exe", "-nobanner", "-accepteula", "-s"]
-
-
-def setpermissions(path, *, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
     path = Path(path)
 
-    run(sudo + ["takeown", "/A", "/F", path])  # Administrators group own this
+    sudo(["takeown", "/A", "/F", path])  # Administrators group own this
     run(["icacls.exe", path, "/reset"])
 
     # Set correct permissions
@@ -97,13 +127,13 @@ def setpermissions(path, *, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
         permissions = "(OI)(CI)F"
 
     command = ["icacls.exe", path, "/inheritance:r"]
-    for sid in sids:
+    for sid in extrasids:
         command += ["/grant", f"*{sid}:{permissions}"]
 
     run(command)
 
 
-def ensurefile(path, *, contents: bytes = None, directory=False, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
+def ensurefile(path, *, contents: bytes = None, directory=False, extrasids=None):
     """Ensure that a file exists and has permissions set."""
     path = Path(path)
     if path.exists():
@@ -123,20 +153,11 @@ def ensurefile(path, *, contents: bytes = None, directory=False, sids=[SID_SYSTE
 
         path.mkdir()
 
-    setpermissions(path, sids=sids)
+    setpermissions(path, extrasids=extrasids)
 
 
-def ensuredir(path, *, sids=[SID_SYSTEM, SID_ADMINISTRATORS]):
-    return ensurefile(path, directory=True, sids=sids)
-
-
-def fix_permissions(path):
-    try:
-        setpermissions(path, sids=[SID_SYSTEM, SID_NETWORK_SERVICE, SID_ADMINISTRATORS])
-    except subprocess.CalledProcessError:
-        return 1
-    except RuntimeError:
-        return 2
+def ensuredir(path, *, extrasids=None):
+    return ensurefile(path, directory=True, extrasids=extrasids)
 
 
 def winsw_fingerprint(path):
@@ -145,14 +166,22 @@ def winsw_fingerprint(path):
     return hash, version
 
 
+# Command-line commands ================================================================================================
+def fix_permissions(path):
+    try:
+        setpermissions(path, extrasids=sids.network_service)
+    except subprocess.CalledProcessError:
+        return 1
+    except RuntimeError:
+        return 2
+
+
 def install(tunnel_name):
-    programdata = os.getenv("ProgramData")
-    servicesdir = Path(f"{programdata}/SshReverseTunnel/services")
-    service_exe = servicesdir / f"{tunnel_name}.exe"
-    service_yaml = servicesdir / f"{tunnel_name}.yml"
+    service_exe = dirs.services / f"{tunnel_name}.exe"
+    service_yaml = dirs.services / f"{tunnel_name}.yml"
 
     try:
-        with open(dir / "service-template.yml") as f:
+        with open(dirs.repo / "service-template.yml") as f:
             template_str = f.read()
 
         config_str, _ = re.subn("\${TunnelName}", tunnel_name, template_str)
@@ -165,7 +194,7 @@ def install(tunnel_name):
 
         log("Running the test command")
         try:
-            run("psexec -u \"NT AUTHORITY\\NETWORK SERVICE\" -nobanner -accepteula "
+            run(f"{files.psexec} -u \"NT AUTHORITY\\NETWORK SERVICE\" -nobanner -accepteula "
                 f"{config['executable']} {config['testArguments']}", shell=True)
         except subprocess.CalledProcessError:
             error("Service test failed.")
@@ -175,25 +204,22 @@ def install(tunnel_name):
         # WinSW requires us to rename it to <tunnel_name>.exe an to place it alongside the yaml file.
         # To not duplicate executables we will scan the services directory and create a hardlink if an executable
         # already exists.
-        target_fingerprint = winsw_fingerprint(bindir / "WinSW.exe")
-        programdata = os.getenv("ProgramData")
-        servicesdir = Path(f"{programdata}/SshReverseTunnel/services")
-        service_exe = servicesdir / f"{tunnel_name}.exe"
+        target_fingerprint = winsw_fingerprint(dirs.bin / "WinSW.exe")
 
-        for exe in servicesdir.glob("*.exe"):
+        for exe in dirs.services.glob("*.exe"):
             if winsw_fingerprint(exe) == target_fingerprint:
                 service_exe.hardlink_to(exe)
                 break
         else:
             # We can't create a hard link to our WinSW because it might not be on the same disk.
-            shutil.copy(bindir / "WinSW.exe", service_exe)
-        setpermissions(service_exe, sids=[SID_SYSTEM, SID_NETWORK_SERVICE, SID_ADMINISTRATORS])
+            shutil.copy(dirs.bin / "WinSW.exe", service_exe)
+        setpermissions(service_exe, extrasids=sids.network_service)
 
         with open(service_yaml, "w", encoding="utf-8") as f:
             yaml.dump(config, f)
-        setpermissions(service_yaml, sids=[SID_SYSTEM, SID_NETWORK_SERVICE, SID_ADMINISTRATORS])
+        setpermissions(service_yaml, extrasids=sids.network_service)
 
-        run(f"{service_exe} install")
+        run([service_exe, "install"])
 
     except subprocess.CalledProcessError:
         service_yaml.unlink(missing_ok=True)
@@ -214,7 +240,8 @@ def bootstrap(entry_shell=None):
         firewall_rule_query = pwsh_query("(Get-NetFirewallRule -Name \"OpenSSH-Server-In-TCP\").Enabled")
         if firewall_rule_query.returncode != 0:
             log("Adding firewall rule for OpenSSH")
-            pwsh("New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22")
+            pwsh("New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True"
+                 " -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22")
         elif not firewall_rule_query.stdout.startswith(b"True"):
             log("Enabling firewall rule for OpenSSH")
             pwsh("Enable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP'")
@@ -241,38 +268,34 @@ def bootstrap(entry_shell=None):
                 f"New-ItemProperty -Path \"HKLM:\\SOFTWARE\\OpenSSH\" -Name DefaultShell -Value \"{entry_shell_path}\" -PropertyType String -Force")
 
         log("Downloading dependencies")
-        if bindir.exists():
-            shutil.rmtree(bindir)
-        if tempdir.exists():
-            shutil.rmtree(tempdir)
-        bindir.mkdir(parents=True, exist_ok=True)
-        tempdir.mkdir(parents=True, exist_ok=True)
+        if dirs.bin.exists():
+            shutil.rmtree(dirs.bin)
+        if dirs.temp.exists():
+            shutil.rmtree(dirs.temp)
+        dirs.bin.mkdir()
+        dirs.temp.mkdir()
 
-        run(["curl", "-L", "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe", "-o", bindir / "WinSW.exe"])
-        run(["curl", "-L", "https://download.sysinternals.com/files/PSTools.zip", "-o", tempdir / "PSTools.zip"])
-        with ZipFile(tempdir / "PSTools.zip", "r") as zf:
-            zf.extract("PsExec64.exe", bindir)
-        shutil.rmtree(tempdir)
-
-        programdata = Path(os.getenv("ProgramData"))
-        sshdir = programdata / "ssh"
-        sshrtdir = programdata / "SshReverseTunnel"
+        run(["curl", "-L", "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe", "-o", files.winsw])
+        run(["curl", "-L", "https://download.sysinternals.com/files/PSTools.zip", "-o", dirs.temp / "PSTools.zip"])
+        with ZipFile(dirs.temp / "PSTools.zip", "r") as zf:
+            with zf.open("/PsExec64.exe", "r") as src, open(files.psexec, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+        shutil.rmtree(dirs.temp)
 
         log("Generating host SSH keys")
-        run(sudo + ["ssh-keygen", "-A"])
-        for hostkey in sshdir.glob("ssh_host_*"):
+        sudo(["ssh-keygen", "-A"])
+        for hostkey in dirs.ssh.glob("ssh_host_*"):
             setpermissions(hostkey)
 
         log("Creating necessary files")
-        sshrt_sids = {SID_SYSTEM, SID_ADMINISTRATORS, SID_NETWORK_SERVICE}
-        ensurefile(sshdir / "administrators_authorized_keys")
-        ensurefile(sshdir / "ssh_known_hosts", sids=sshrt_sids)
+        ensurefile(files.authorized_keys)
+        ensurefile(files.known_hosts, extrasids=sids.network_service)
 
-        ensuredir(sshrtdir)
-        ensuredir(sshrtdir / "services", sids=sshrt_sids)
-        ensuredir(sshrtdir / "logs", sids=sshrt_sids)
-        ensuredir(sshrtdir / "config.d", sids=sshrt_sids)
-        ensurefile(sshrtdir / "config", sids=sshrt_sids,
+        ensuredir(dirs.root)
+        ensuredir(dirs.services, extrasids=sids.network_service)
+        ensuredir(dirs.logs, extrasids=sids.network_service)
+        ensuredir(dirs.configs, extrasids=sids.network_service)
+        ensurefile(files.config, extrasids=sids.network_service,
                    contents=b"Include __PROGRAMDATA__/SshReverseTunnel/config.d/*\n")
 
         log("Starting OpenSSH Server")
@@ -285,15 +308,18 @@ def bootstrap(entry_shell=None):
         return 2
 
 
+# ======================================================================================================================
 def cli():
     parser = ArgumentParser("ssh-tunnel")
     subparsers = parser.add_subparsers(dest="command")
 
     bootstrap = subparsers.add_parser("bootstrap")
-    bootstrap.add_argument("--entry-shell")
+    bootstrap.add_argument(
+        "--entry-shell",
+        help="entry shell for incoming SSH connections (default: keep current or set latest powershell)")
 
     install = subparsers.add_parser("install")
-    install.add_argument("tunnel_name")
+    install.add_argument("tunnel_name", help="SSH tunnel name, same as \"Host\" field in config, unique on this system")
 
     fix_permissions = subparsers.add_parser("fix-permissions")
     fix_permissions.add_argument("path")
@@ -303,12 +329,12 @@ def cli():
 
 def main():
     colorama.init(autoreset=True)
+    args = cli().parse_args()
 
-    if not isadmin:
+    if not ctypes.windll.shell32.IsUserAnAdmin():
         print("Please restart me from an admin shell.")
         return 1
 
-    args = cli().parse_args()
     if args.command == "bootstrap":
         return bootstrap(entry_shell=args.entry_shell)
     if args.command == "install":
