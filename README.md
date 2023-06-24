@@ -17,7 +17,7 @@ pip install -r requirements.txt  # Install required packages
 python -m sshrt bootstrap
 ```
 The last command will do the following important things:
-1. Enable Windows buit-in components for OpenSSH Server and Client;
+1. Enable Windows built-in components for OpenSSH Server and Client;
 2. Add a firewall rule so that said services may work;
 3. Set SSH Server to start with Windows and start it immediately;
 4. Create necessary directories and files for SSH Server and the reverse tunnels.
