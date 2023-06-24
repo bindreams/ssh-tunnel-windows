@@ -1,0 +1,22 @@
+id: SshReverseTunnel-${TunnelName}
+name: "OpenSSH Reverse Tunnel: ${TunnelName}"
+description: "OpenSSH Reverse Tunnel: ${TunnelName}"
+startMode: Automatic
+serviceDependencies:
+  - sshd
+executable: '%SystemRoot%\System32\OpenSSH\ssh.exe'
+arguments:     -F %ProgramData%\SshReverseTunnel\config -o BatchMode=yes -vNT ${TunnelName}
+testArguments: -F %ProgramData%\SshReverseTunnel\config -o BatchMode=yes -o ClearAllForwardings=yes -vvv ${TunnelName} whoami
+onFailure:
+  - action: restart
+  - action: restart
+    delay: 30 sec
+resetFailure: 30 sec
+serviceAccount:
+  domain: NT AUTHORITY
+  user: NetworkService
+log:
+  logPath: '%ProgramData%\SshReverseTunnel\logs'
+  mode: roll
+  sizeThreshold: 10240
+  keepFiles: 5

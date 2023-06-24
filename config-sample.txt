@@ -1,0 +1,12 @@
+Host <tunnel-name>
+	HostName <remote-ip-address>
+	User <remote-user>
+	IdentityFile <absolute-key-path>
+	IdentitiesOnly yes
+	RemoteForward 10022 localhost:22
+
+    # Important: makes SSH exit when tunnel stops responding.
+	ServerAliveInterval 10
+	ServerAliveCountMax 3
+    # Important: makes SSH exit when tunnel could not be established.
+	ExitOnForwardFailure yes

@@ -1,0 +1,8 @@
+/bin
+/temp
+
+.vscode
+.idea
+
+.venv
+__pycache__
