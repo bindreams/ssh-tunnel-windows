@@ -185,3 +185,12 @@ SSH server on the remote machine did not accept your key. You may need to look h
   ```
   python -m sshrt fix-permissions <your-keyfile>
   ```
+
+## License
+<img style="float: right;" src="https://www.gnu.org/graphics/gplv3-with-text-136x68.png">
+
+This project is licensed under the [GNU GPL version 3.0](/LICENSE.md), which means it is free for you to use. You have no requirements to open-source anything if you use these scripts, not your ansible configs, not your Dockerfiles, unless:
+1. You modify these scripts;
+2. You distribute these scripts.
+
+If this license prevents you from using these scripts in your environment, please open up an issue and we will figure it out.
