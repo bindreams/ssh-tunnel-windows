@@ -1,19 +1,18 @@
+import base64
 import ctypes
+import hashlib
+import os
+import re
+import shutil
+import subprocess
 import sys
 from argparse import ArgumentParser
-import subprocess
-import base64
-import colorama
-from colorama import Fore, Style
 from pathlib import Path
-import shutil
-import os
 from zipfile import ZipFile
+
+import colorama
 import yaml
-import sys
-import re
-import sys
-import hashlib
+from colorama import Fore, Style
 
 isadmin = ctypes.windll.shell32.IsUserAnAdmin() != 0
 dir = Path(__file__).parent
