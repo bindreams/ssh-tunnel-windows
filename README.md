@@ -1,7 +1,7 @@
 # SSH Reverse Tunnel Scripts (Windows)
 
 ## Install your first reverse tunnel
-**Note:** every console command in this file is written for PowerShell, not `cmd`. This means that environment variables, such as `PROGRAMDATA` are written in powershell syntax (`${env:ProgramData}`). When referencing paths outside of console, the percent syntax (`%PROGRAMDATA`) is used instead so that you may paste this path directly into an explorer window.
+**Note:** every console command in this file is written for PowerShell, not `cmd`. This means that environment variables, such as `PROGRAMDATA` are written in powershell syntax (`${env:ProgramData}`). When referencing paths outside of console, the percent syntax (`%PROGRAMDATA%`) is used instead so that you may paste this path directly into an explorer window.
 
 ### 1. Bootstrap sshrt.py
 Clone this repository or download a zip file. You may delete the folder when you finish installing the service. Open a powershell terminal in the downloaded folder and run the following commands to bootstrap sshrt.py script:
@@ -173,7 +173,7 @@ ssh-keyscan -t rsa <your-ip-address> >> ${env:ProgramData}/ssh/ssh_known_hosts
 
 #### Bad owner or permissions on `your-keyfile` / no such identity: `your-keyfile`: Permission denied
 You need to grant permissions to your keyfile to `NT AUTHORITY\NETWORK SERVICE` or run:
-```
+```powershell
 python -m sshrt fix-permissions <your-keyfile>
 ```
 
@@ -182,7 +182,7 @@ SSH server on the remote machine did not accept your key. You may need to look h
 - `no such identity: <your-keyfile>: No such file or directory`: your key file does not exist or the path you provided in your ssh config is wrong;
 - `offering public key: <your-keyfile>`, `receive packet: type 51`: sshd server does not authorize this key. You need to add your public key to your remote server's `authorized_keys` file (`~/.ssh/authorized_keys` on POSIX, `%ProgramData%/ssh/administrators_authorized_keys` on Windows).
 - `Load key "<your-keyfile>": Permission denied`: you need to grant permissions to your keyfile to `NT AUTHORITY\NETWORK SERVICE` or run:
-  ```
+  ```powershell
   python -m sshrt fix-permissions <your-keyfile>
   ```
 
