@@ -1,7 +1,11 @@
 # SSH Reverse Tunnel Scripts (Windows)
+This repository contains everything you need to create self-restarting, fault-tolerant reverse SSH tunnels from Windows machines. If you have a Windows machine in a protected network or under NAT, and you'd like to reach it from the internet using a proxy, this repository will enable you to do just that.
+
+For Linux-based or otherwise `systemd`-enabled servers, check out our sister reporitory [bindreams/ssh-tunnel-systemd](https://github.com/bindreams/ssh-tunnel-systemd).
 
 ## Install your first reverse tunnel
-**Note:** every console command in this file is written for PowerShell, not `cmd`. This means that environment variables, such as `PROGRAMDATA` are written in powershell syntax (`${env:ProgramData}`). When referencing paths outside of console, the percent syntax (`%PROGRAMDATA%`) is used instead so that you may paste this path directly into an explorer window.
+> **Note**<br>
+> Every console command in this file is written for PowerShell, not `cmd`. This means that environment variables, such as `PROGRAMDATA` are written in powershell syntax (`${env:ProgramData}`). When referencing paths outside of console, the percent syntax (`%PROGRAMDATA%`) is used instead so that you may paste this path directly into an explorer window.
 
 ### 1. Bootstrap sshrt.py
 Clone this repository or download a zip file. You may delete the folder when you finish installing the service. Open a powershell terminal in the downloaded folder and run the following commands to bootstrap sshrt.py script:
@@ -24,7 +28,7 @@ Get-Service sshd
 ```
 
 ### 2. Configure public-key based SSH access from A to B
-Generate an RSA key pair on machine A. This key will be used to establish an SSH tunnel, but you will need to test your connection first so place it in your user directory for now. The key should be passwordless, because the reverse tunnel start up automatically and there is no way to enter a password. The following command is an example of how to create a passwordless RSA key and store it in `%USERPROFILE%/.ssh`:
+Generate an RSA key pair on machine A. This key will be used to establish an SSH tunnel, but you will need to test your connection first so place it in your user directory for now. The key should be passwordless, because the reverse tunnel start up automatically and there is no way to enter a password. The following command is an example of how to create a passwordless RSA key and store it in `%USERPROFILE%/.ssh/`:
 ```powershell
 ssh-keygen -f "$HOME/.ssh/MachineB.id" -N '""' -t rsa
 ```
@@ -84,7 +88,8 @@ Explanation:
 - `ServerAliveInterval`: How often (in seconds) SSH will send a packet to check whether the connection is working. This is very important: without this config option the tunnel will never restart.
 - `ServerAliveCountMax`: How many alive-packets need to fail before the tunnel is considered dead and the process terminates (or, in our case, restarts). In the example above machine A sends a packet every 10 seconds and restarts after 3 failed packets, so the maximum amount of time between a connection failure and restart is 10*3=30 seconds.
 
-**Important:** If you indeed use your tunnel for SSH connections, you may need to update some settings on machine B as well. See [troubleshooting/ssh connection hangs](#ssh-connection-hangs-with-no-output--error-remote-port-forwarding-failed-for-listen-port-port) for more information.
+> **Warning**<br>
+> If you indeed use your tunnel for SSH connections, you may need to update some settings on machine B as well. See [troubleshooting/ssh connection hangs](#ssh-connection-hangs-with-no-output--error-remote-port-forwarding-failed-for-listen-port-port) for more information.
 
 Since the config file will be used by a system user called `NT AUTHORITY\NETWORK SERVICE`, you need to make sure that the config file has correct permissions for this. `sshrt` has a subcommand `fix-permissions` for this. For example:
 ```powershell
@@ -210,7 +215,6 @@ TCPKeepAlive yes
 The first two entries directly mirror `ServerAliveInterval` and `ServerAliveCountMax`, so in this case the delay between a dead connection and a killed off process is 10*3=30 seconds. The latter, `TCPKeepAlive` uses a different mechanism that can be omitted if you'd like. Consult [`man sshd_config`](https://linux.die.net/man/5/sshd_config) for more information.
 
 ## License
-
 <img align="right" src="https://www.gnu.org/graphics/gplv3-with-text-136x68.png">
 
 This project is licensed under the [GNU GPL version 3.0](/LICENSE.md), which means it is free for you to use. You have no requirements to open-source anything if you use these scripts, not your ansible configs, not your Dockerfiles, unless:
