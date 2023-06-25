@@ -41,11 +41,12 @@ sids.network_service = "S-1-5-20"
 
 default_config = b"""
 Host *
-    BatchMode            yes
-	IdentitiesOnly       yes
-	ExitOnForwardFailure yes
-	ServerAliveInterval  10
-	ServerAliveCountMax  3
+\tBatchMode            yes
+\tIdentitiesOnly       yes
+\tExitOnForwardFailure yes
+\tTCPKeepAlive         yes
+\tServerAliveInterval  10
+\tServerAliveCountMax  3
 
 Include __PROGRAMDATA__/SshReverseTunnel/config.d/*
 """.lstrip()
