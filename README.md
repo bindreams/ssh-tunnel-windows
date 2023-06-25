@@ -4,6 +4,14 @@ This repository contains everything you need to create self-restarting, fault-to
 For Linux-based or otherwise `systemd`-enabled servers, check out our sister reporitory [bindreams/ssh-tunnel-systemd](https://github.com/bindreams/ssh-tunnel-systemd).
 
 ## Install your first reverse tunnel
+After completing this tutorial, you will have a self-restarting SSH reverse tunnel service, controlled by the following files in `%ProgramData%/SshReverseTunnel`:
+- `config.d/<tunnel-name>.conf`: SSH configuration file;
+- `services/<tunnel-name>.yml`: YAML configuration file with service properties (restart policy, log rotation, etc.);
+- `services/<tunnel-name>.exe`: Executable shim that launches the SSH tunnel, based on [WinSW](https://github.com/winsw/winsw);
+- `logs/<tunnel-name>.out.log`: `stdout` for the SSH process (usually empty);
+- `logs/<tunnel-name>.err.log`: `stderr` for the SSH process;
+- `logs/<tunnel-name>.wrapper.log`: log for the shim executable above.
+
 > **Note**<br>
 > Every console command in this file is written for PowerShell, not `cmd`. This means that environment variables, such as `PROGRAMDATA` are written in powershell syntax (`${env:ProgramData}`). When referencing paths outside of console, the percent syntax (`%ProgramData%`) is used instead so that you may paste this path directly into an explorer window.
 
