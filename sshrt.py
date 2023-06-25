@@ -99,12 +99,18 @@ def pwsh_query(command: str):
 
 
 # Report messages ======================================================================================================
+def msg(message, color):
+    # Add "# " before each line
+    message = "\n".join(f"# {s}" for s in message.split("\n"))
+    print(f"{color}{Style.BRIGHT}{message}")
+
+
 def log(message):
-    print(f"{Fore.CYAN}{Style.BRIGHT}# {message}")
+    msg(message, color=Fore.CYAN)
 
 
 def error(message):
-    print(f"{Fore.RED}{Style.BRIGHT}# {message}")
+    msg(message, color=Fore.RED)
 
 
 # Utility functions ====================================================================================================
@@ -202,7 +208,7 @@ def install(tunnel_name):
         service_exists_query = pwsh_query(f"Get-Service -Name {config['id']}")
         if service_exists_query.returncode == 0:
             error(f"Service {config['id']} already exists."
-                  " You can delete it manually by running \"Remove-Service {config['id']}\".")
+                  f" You can delete it manually by running:\n  Remove-Service {config['id']}")
             raise RuntimeError
 
         log("Running the test command")
