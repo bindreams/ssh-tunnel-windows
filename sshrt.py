@@ -224,6 +224,7 @@ def install(tunnel_name):
         # To not duplicate executables we will scan the services directory and create a hardlink if an executable
         # already exists.
         target_fingerprint = winsw_fingerprint(dirs.bin / "WinSW.exe")
+        service_exe.unlink(missing_ok=True)  # Remove service exe if it was left out by a broken service removal
 
         for exe in dirs.services.glob("*.exe"):
             if winsw_fingerprint(exe) == target_fingerprint:
@@ -241,12 +242,8 @@ def install(tunnel_name):
         run([service_exe, "install"])
 
     except subprocess.CalledProcessError:
-        service_yaml.unlink(missing_ok=True)
-        service_exe.unlink(missing_ok=True)
         return 1
     except RuntimeError:
-        service_yaml.unlink(missing_ok=True)
-        service_exe.unlink(missing_ok=True)
         return 2
 
 
