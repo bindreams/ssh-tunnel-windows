@@ -1,3 +1,7 @@
+# Copyright (C) 2023 Anna Zhukova
+#
+# This file is part of ssh-tunnel-windows, distributed under the GNU GPL version 3.
+# For full terms see https://github.com/bindreams/ssh-tunnel-windows/blob/main/LICENSE.md
 import base64
 import ctypes
 import hashlib
