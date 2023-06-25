@@ -39,6 +39,17 @@ sids.administrators = "S-1-5-32-544"
 sids.system = "S-1-5-18"
 sids.network_service = "S-1-5-20"
 
+default_config = b"""
+Host *
+    BatchMode            yes
+	IdentitiesOnly       yes
+	ExitOnForwardFailure yes
+	ServerAliveInterval  10
+	ServerAliveCountMax  3
+
+Include __PROGRAMDATA__/SshReverseTunnel/config.d/*
+""".lstrip()
+
 # Run shell commands ===================================================================================================
 def run(command, **kwargs):
     kwargs["check"] = kwargs.get("check", True)
@@ -265,7 +276,13 @@ def bootstrap(entry_shell=None):
                 raise RuntimeError
             entry_shell_path = entry_shell_path_query.stdout.decode().strip()
             pwsh(
-                f"New-ItemProperty -Path \"HKLM:\\SOFTWARE\\OpenSSH\" -Name DefaultShell -Value \"{entry_shell_path}\" -PropertyType String -Force")
+                "New-ItemProperty"
+                " -Path \"HKLM:\\SOFTWARE\\OpenSSH\""
+                " -Name DefaultShell"
+                f" -Value \"{entry_shell_path}\""
+                " -PropertyType String"
+                " -Force"
+            )
 
         log("Downloading dependencies")
         if dirs.bin.exists():
@@ -295,8 +312,7 @@ def bootstrap(entry_shell=None):
         ensuredir(dirs.services, extrasids=sids.network_service)
         ensuredir(dirs.logs, extrasids=sids.network_service)
         ensuredir(dirs.configs, extrasids=sids.network_service)
-        ensurefile(files.config, extrasids=sids.network_service,
-                   contents=b"Include __PROGRAMDATA__/SshReverseTunnel/config.d/*\n")
+        ensurefile(files.config, extrasids=sids.network_service, contents=default_config)
 
         log("Starting OpenSSH Server")
         pwsh("Start-Service -Name sshd")

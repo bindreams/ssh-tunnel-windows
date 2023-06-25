@@ -6,8 +6,8 @@ depend:
   - LanmanServer  # A proxy for working internet connection
   - sshd          # Remove this if you are not using SSH tunnel for SSH
 executable: '%SystemRoot%\System32\OpenSSH\ssh.exe'
-arguments:     -F %ProgramData%\SshReverseTunnel\config -o BatchMode=yes -vNT ${TunnelName}
-testArguments: -F %ProgramData%\SshReverseTunnel\config -o BatchMode=yes -o ClearAllForwardings=yes -vvv ${TunnelName} whoami
+arguments:     -F %ProgramData%\SshReverseTunnel\config -vNT ${TunnelName}
+testArguments: -F %ProgramData%\SshReverseTunnel\config -o ClearAllForwardings=yes -vvv ${TunnelName} whoami
 onFailure:
   - action: restart
   - action: restart

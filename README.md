@@ -73,20 +73,21 @@ Host MachineB
 	IdentityFile __PROGRAMDATA__/SshReverseTunnel/MachineB.id
 	...
 ```
-Second, add the following lines to turn this config into an actual reverse tunnel:
+Second, add the following line to turn this config into an actual reverse tunnel:
 ```
 Host MachineB
 	...
 	RemoteForward <tunnel port> localhost:<local port>
-	ServerAliveInterval 10
-	ServerAliveCountMax 3
-	ExitOnForwardFailure yes
 ```
 Explanation:
 - Tunnel port: the port on machine B which clients will connect to to reach machine A (go through the tunnel). Ports above 10000 are generally available; consult [Wikipedia port number list](https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers) for more information.
-- Local port: the port on machine A which clients will connect to when they exit the tunnel. If you plant SSH from machine B to machine A then this port is 22. If you want to reverse-forward something else, such as a website running on machine A, this port is 80 or 443.
-- `ServerAliveInterval`: How often (in seconds) SSH will send a packet to check whether the connection is working. This is very important: without this config option the tunnel will never restart.
-- `ServerAliveCountMax`: How many alive-packets need to fail before the tunnel is considered dead and the process terminates (or, in our case, restarts). In the example above machine A sends a packet every 10 seconds and restarts after 3 failed packets, so the maximum amount of time between a connection failure and restart is 10*3=30 seconds.
+- Local port: the port on machine A which clients will connect to when they exit the tunnel. If you plan to use the tunnel to SSH from machine B to machine A then this port is 22. If you want to reverse-forward something else, such as a website running on machine A, this port is 80 or 443.
+
+If you'd like, here you can also configure the frequency of heartbeat packets that are sent through the tunnel to determine if the connection between machine A and machine B was severed. Heartbeat packets are controlled by two settings:
+- `ServerAliveInterval` (default 10): How often (in seconds) SSH will send a packet to check whether the connection is working. Never disable this by setting it to 0: without this config option the tunnel will never restart.
+- `ServerAliveCountMax` (default 3): How many packets need to fail before the tunnel is considered dead and the process terminates (or, in our case, restarts). 
+
+By default, machine A sends a packet every 10 seconds and restarts after 3 failed packets, so the maximum amount of time between a connection failure and restart is 10*3=30 seconds.
 
 > **Warning**<br>
 > If you indeed use your tunnel for SSH connections, you may need to update some settings on machine B as well. See [troubleshooting/ssh connection hangs](#ssh-connection-hangs-with-no-output--error-remote-port-forwarding-failed-for-listen-port-port) for more information.
