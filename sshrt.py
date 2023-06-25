@@ -201,7 +201,8 @@ def install(tunnel_name):
 
         service_exists_query = pwsh_query(f"Get-Service -Name {config['id']}")
         if service_exists_query.returncode == 0:
-            error(f"Service {config['id']} already exists. Re-run this command with --force to remove it.")
+            error(f"Service {config['id']} already exists."
+                  " You can delete it manually by running \"Remove-Service {config['id']}\".")
             raise RuntimeError
 
         log("Running the test command")
