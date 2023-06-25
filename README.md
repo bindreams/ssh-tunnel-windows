@@ -5,7 +5,7 @@ For Linux-based or otherwise `systemd`-enabled servers, check out our sister rep
 
 ## Install your first reverse tunnel
 > **Note**<br>
-> Every console command in this file is written for PowerShell, not `cmd`. This means that environment variables, such as `PROGRAMDATA` are written in powershell syntax (`${env:ProgramData}`). When referencing paths outside of console, the percent syntax (`%PROGRAMDATA%`) is used instead so that you may paste this path directly into an explorer window.
+> Every console command in this file is written for PowerShell, not `cmd`. This means that environment variables, such as `PROGRAMDATA` are written in powershell syntax (`${env:ProgramData}`). When referencing paths outside of console, the percent syntax (`%ProgramData%`) is used instead so that you may paste this path directly into an explorer window.
 
 ### 1. Bootstrap sshrt.py
 Clone this repository or download a zip file. You may delete the folder when you finish installing the service. Open a powershell terminal in the downloaded folder and run the following commands to bootstrap sshrt.py script:
@@ -37,7 +37,7 @@ After running `ssh-keygen` you will have two key files, with one ending in `.pub
 |             | Login as: admin                                    | Login as: user                         |
 | ----------- | -------------------------------------------------- | -------------------------------------- |
 | OS: Linux   | `/root/.ssh/authorized_keys`                       | `/home/<user>/.ssh/authorized_keys`    |
-| OS: Windows | `%PROGRAMDATA%/ssh/administrators_authorized_keys` | `C:/Users/<user>/.ssh/authorized_keys` |
+| OS: Windows | `%ProgramData%/ssh/administrators_authorized_keys` | `C:/Users/<user>/.ssh/authorized_keys` |
 
 Once this is done, add a temporary entry in your config file at `%USERPROFILE%/.ssh/config/`:
 ```
@@ -59,12 +59,12 @@ Now that a key pair and a config entry have been created, you can proceed with c
 First, you will need to **move** (not copy) your key files and config entry from your local ssh folder to their permanent place. Note that after doing this, you will no longer be able to connect to machine B manually using this key pair. If you need to, create a separate key pair for this.
 
 Move your key files (named `MachineB.id` and `MachineB.id.pub` in this guide) to one of these two directories:
-- `%PROGRAMDATA%/SshReverseTunnel/` - if it's going to be used for the reverse tunneling only;
-- `%PROGRAMDATA%/ssh/` - if it's going to be used as a general admin key for accessing machine B.
+- `%ProgramData%/SshReverseTunnel/` - if it's going to be used for the reverse tunneling only;
+- `%ProgramData%/ssh/` - if it's going to be used as a general admin key for accessing machine B.
 
 Move the entry you made in `%USERPROFILE%/.ssh/config` to:
-- `%PROGRAMDATA%/SshReverseTunnel/config.d/` (recommended) - if you want to keep configs in separate files;
-- `%PROGRAMDATA%/SshReverseTunnel/config` - if you only have one tunnel, or plan to keep all configs together in one file. Note that `config` is protected from editing by regular users so to open it you will need to run `notepad %PROGRAMDATA%/SshReverseTunnel/config` from an admin terminal.
+- `%ProgramData%/SshReverseTunnel/config.d/` (recommended) - if you want to keep configs in separate files;
+- `%ProgramData%/SshReverseTunnel/config` - if you only have one tunnel, or plan to keep all configs together in one file. Note that `config` is protected from editing by regular users so to open it you will need to run `notepad %ProgramData%/SshReverseTunnel/config` from an admin terminal.
 
 You will also need to do some adjustments to the config entry. First, update it with the new location of the key. To reference the `C:/ProgramData` folder use the replacement string `__PROGRAMDATA__`, for example:
 ```
@@ -111,7 +111,7 @@ ssh-keyscan -t rsa <machine B IP address> >> "${env:ProgramData}/ssh/ssh_known_h
 ```
 
 ### 4. Create the tunnel service
-Finally, now that every piece is in place, you may create the reverse tunnel service. This service is created using a tool called [WinSW](https://github.com/winsw/winsw) from a YAML template file called `service-template.yml` in this project's root directory. You can modify this template if you wish to change some internal service settings like the path to logs (default is `%PROGRAMDATA%/SshReverseTunnel/logs`), log rotation settings, or how the service behaves when the SSH tunnel fails (by default it restarts the tunnel immediately, unless the tunnel fails to connect, in which case it waits 30 seconds before restarting).
+Finally, now that every piece is in place, you may create the reverse tunnel service. This service is created using a tool called [WinSW](https://github.com/winsw/winsw) from a YAML template file called `service-template.yml` in this project's root directory. You can modify this template if you wish to change some internal service settings like the path to logs (default is `%ProgramData%/SshReverseTunnel/logs`), log rotation settings, or how the service behaves when the SSH tunnel fails (by default it restarts the tunnel immediately, unless the tunnel fails to connect, in which case it waits 30 seconds before restarting).
 
 Anyway, run the `install` command to create your tunnel service. `install` accepts a positional argument `tunnel_name` which should be identical to the `Host` field in your `config` file:
 ```powershell
@@ -123,7 +123,7 @@ When the command succeds, it will create the service you requested with the id o
 ```
 Get-Service SshReverseTunnel-MachineB
 ```
-You will notice that that the service was not started automatically. You can start it right away by calling `Start-Service`, or it will start automatically with system reboot. It's recommended that you start the service immediately to test for possible problems. If you receive a message `Start-Service: Failed to start service`, check for possible causes in `%PROGRAMDATA%/SshReverseTunnel/logs` and `Windows Logs/Application` in the Event Viewer.
+You will notice that that the service was not started automatically. You can start it right away by calling `Start-Service`, or it will start automatically with system reboot. It's recommended that you start the service immediately to test for possible problems. If you receive a message `Start-Service: Failed to start service`, check for possible causes in `%ProgramData%/SshReverseTunnel/logs` and `Windows Logs/Application` in the Event Viewer.
 
 ### 5. Connect using the SSH tunnel
 The most basic way to check that the SSH tunnel is working is to connect through it via SSH. This is not the same as what was done in step 2: we are now connecting in reverse from machine B to machine A, using the newly established tunnel. Since your tunnel connects `localhost` to Machine A using a port you picked as `<tunnel port>` in your config, the `ssh` command will look something like this:
