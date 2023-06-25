@@ -83,23 +83,27 @@ Explanation:
 - Tunnel port: the port on machine B which clients will connect to to reach machine A (go through the tunnel). Ports above 10000 are generally available; consult [Wikipedia port number list](https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers) for more information.
 - Local port: the port on machine A which clients will connect to when they exit the tunnel. If you plan to use the tunnel to SSH from machine B to machine A then this port is 22. If you want to reverse-forward something else, such as a website running on machine A, this port is 80 or 443.
 
-If you'd like, here you can also configure the frequency of heartbeat packets that are sent through the tunnel to determine if the connection between machine A and machine B was severed. Heartbeat packets are controlled by two settings:
+If you'd like, here you can also configure the frequency of heartbeat packets that are sent through the tunnel to determine if the connection between machine A and machine B was severed. Heartbeat packets are controlled by three settings:
 - `ServerAliveInterval` (default 10): How often (in seconds) SSH will send a packet to check whether the connection is working. Never disable this by setting it to 0: without this config option the tunnel will never restart.
-- `ServerAliveCountMax` (default 3): How many packets need to fail before the tunnel is considered dead and the process terminates (or, in our case, restarts). 
+- `ServerAliveCountMax` (default 3): How many packets need to fail before the tunnel is considered dead and the process terminates (or, in our case, restarts).
+- `TCPKeepAlive` (default yes): A secondary method of checking the connection. See [`man ssh_config`](https://linux.die.net/man/5/ssh_config) for more information.
 
 By default, machine A sends a packet every 10 seconds and restarts after 3 failed packets, so the maximum amount of time between a connection failure and restart is 10*3=30 seconds.
 
 > **Warning**<br>
-> If you indeed use your tunnel for SSH connections, you may need to update some settings on machine B as well. See [troubleshooting/ssh connection hangs](#ssh-connection-hangs-with-no-output--error-remote-port-forwarding-failed-for-listen-port-port) for more information.
+> If you indeed use your tunnel for SSH connections, you may need to update some settings for SSH Server as well. See [troubleshooting/ssh connection hangs](#ssh-connection-hangs-with-no-output--error-remote-port-forwarding-failed-for-listen-port-port) for more information.
 
 Since the config file will be used by a system user called `NT AUTHORITY\NETWORK SERVICE`, you need to make sure that the config file has correct permissions for this. `sshrt` has a subcommand `fix-permissions` for this. For example:
 ```powershell
-python -m sshrt fix-permissions "${env:ProgramData}/SshReverseTunnel/config.d/MachineB.config.txt"
+python -m sshrt fix-permissions "${env:ProgramData}/SshReverseTunnel/config.d/MachineB.conf"
 ```
 Same goes for the key file as well, for example:
 ```powershell
 python -m sshrt fix-permissions "${env:ProgramData}/SshReverseTunnel/MachineB.id"
 ```
+
+> **Note**<br>
+> Although the extension of the config file does not matter, we prefer to append `.conf` so that it can be configured to be opened as a text file.
 
 Additionally, while you have already connected to this host as your own user, NetworkService account does not know the remote host and will fail unless you add your IP address to the list of known hosts:
 ```powershell
@@ -196,7 +200,7 @@ SSH server on the remote machine did not accept your key. You may need to look h
 
 ### Failing after the service is installed
 #### SSH connection hangs with no output / Error: remote port forwarding failed for listen port `port`
-When using an SSH tunnel to make SSH connection from machine B to machine A, it's important to configure the SSH Server on machine B so that it terminates "zombie" connections where the remote (machine A) was disconnected without telling (such as during a reboot).
+When using an SSH tunnel to make SSH connection from machine B to machine A, it's important to configure the SSH Server on machine A so that machine B terminates "zombie" connections when machine A was disconnected without telling (such as during a sudden power loss).
 
 Restart your ssh connection with `-vvv` and verify that it hangs on these console messages:
 ```
@@ -207,7 +211,7 @@ debug1: Local version string ...
 ```
 If yes, it means the connection is a zombie connection. The tunnel was created, but there's no one on the other side.
 
-You need to add settings that will make SSHD send heartbeat packets, similar to `ServerAliveInterval` but the going the opposite direction. Add the following lines to `/etc/ssh/sshd_config` on Linux or `%ProgramData%/ssh/sshd_config` on Windows:
+You need to add settings that will make SSHD send heartbeat packets, similar to `ServerAliveInterval` but the going the opposite direction. Add the following lines to `%ProgramData%/ssh/sshd_config` on machine A:
 ```
 ClientAliveInterval 10
 ClientAliveCountMax 3
