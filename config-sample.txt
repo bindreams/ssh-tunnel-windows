@@ -5,8 +5,7 @@ Host <tunnel-name>
 	IdentitiesOnly yes
 	RemoteForward 10022 localhost:22
 
-    # Important: makes SSH exit when tunnel stops responding.
-	ServerAliveInterval 10
-	ServerAliveCountMax 3
-    # Important: makes SSH exit when tunnel could not be established.
-	ExitOnForwardFailure yes
+    # Optional settings (defaults set the same as below)
+	#ServerAliveInterval 10
+	#ServerAliveCountMax 3
+	#TCPKeepAlive        yes
