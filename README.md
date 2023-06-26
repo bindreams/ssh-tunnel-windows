@@ -26,11 +26,10 @@ python -m sshrt bootstrap
 ```
 The last command will do the following important things:
 1. Enable Windows built-in components for OpenSSH Server and Client;
-2. Add a firewall rule so that said services may work;
-3. Set SSH Server to start with Windows and start it immediately;
-4. Create necessary directories and files for SSH Server and the reverse tunnels.
+2. Add a firewall rule so that said components may work;
+3. Create necessary directories and files for SSH Server and the reverse tunnels.
 
-Verify that the SSH Server has succesfully started by running:
+Verify that the SSH Server was succesfully installed by running:
 ```powershell
 Get-Service sshd
 ```
