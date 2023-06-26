@@ -127,6 +127,10 @@ def log(message):
     msg(message, color=Fore.CYAN)
 
 
+def log_success(message):
+    msg(message, color=Fore.GREEN)
+
+
 def error(message):
     msg(message, color=Fore.RED)
 
@@ -227,8 +231,8 @@ def install(tunnel_name):
         if service_exists_query.returncode == 0:
             error(
                 f"Service {config['id']} already exists. You can delete it manually by running:\n"
-                f"  sc stop {config['id']}\n"
-                f"  sc delete {config['id']}"
+                f"  Stop-Service {config['id']}\n"
+                f"  sc.exe delete {config['id']}"
             )
             raise RuntimeError
 
@@ -260,6 +264,11 @@ def install(tunnel_name):
         setpermissions(service_yaml, extrasids=sids.network_service)
 
         run([service_exe, "install"])
+        log_success(
+            f"Service \"{config['id']}\" has been installed, but is not started.\n"
+            "You can start it right now by running:\n"
+            f"  Start-Service {config['id']}"
+        )
 
     except subprocess.CalledProcessError:
         return 1
