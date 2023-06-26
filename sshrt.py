@@ -4,7 +4,6 @@
 # For full terms see https://github.com/bindreams/ssh-tunnel-windows/blob/main/LICENSE.md
 import base64
 import ctypes
-import hashlib
 import os
 import re
 import shutil
@@ -16,6 +15,7 @@ from types import SimpleNamespace
 from zipfile import ZipFile
 
 import colorama
+import win32api
 import yaml
 from colorama import Fore, Style
 
@@ -136,20 +136,6 @@ def error(message):
 
 
 # Utility functions ====================================================================================================
-def filehash(path):
-    BUF_SIZE = 65536  # Recommended as a good default for Windows
-    sha256 = hashlib.sha256()
-
-    with open(path, 'rb') as f:
-        while True:
-            data = f.read(BUF_SIZE)
-            if not data:
-                break
-            sha256.update(data)
-
-    return sha256.hexdigest()
-
-
 def setpermissions(path, *, extrasids=None):
     if isinstance(extrasids, str):
         extrasids = {extrasids}
@@ -200,10 +186,12 @@ def ensuredir(path, *, extrasids=None):
     return ensurefile(path, directory=True, extrasids=extrasids)
 
 
-def winsw_fingerprint(path):
-    hash = filehash(path)
-    version = pwsh_query(f"(Get-Item '{path}').VersionInfo.FileVersion").stdout.decode().strip()
-    return hash, version
+def win32_version(path) -> tuple[int, int, int, int]:
+    """Get version embedded in a win32 executable or library."""
+    info = win32api.GetFileVersionInfo(str(path), "\\")
+    ms = info['FileVersionMS']
+    ls = info['FileVersionLS']
+    return win32api.HIWORD(ms), win32api.LOWORD(ms), win32api.HIWORD(ls), win32api.LOWORD(ls)
 
 
 # Command-line commands ================================================================================================
@@ -247,11 +235,11 @@ def install(tunnel_name):
         # WinSW requires us to rename it to <tunnel_name>.exe an to place it alongside the yaml file.
         # To not duplicate executables we will scan the services directory and create a hardlink if an executable
         # already exists.
-        target_fingerprint = winsw_fingerprint(dirs.bin / "WinSW.exe")
+        winsw_version = win32_version(dirs.bin / "WinSW.exe")
         service_exe.unlink(missing_ok=True)  # Remove service exe if it was left out by a broken service removal
 
         for exe in dirs.services.glob("*.exe"):
-            if winsw_fingerprint(exe) == target_fingerprint:
+            if win32_version(exe) == winsw_version:
                 service_exe.hardlink_to(exe)
                 break
         else:
