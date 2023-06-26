@@ -348,10 +348,6 @@ def bootstrap(entry_shell=None):
         ensuredir(dirs.configs, extrasids=sids.network_service)
         ensurefile(files.config, extrasids=sids.network_service, contents=default_config)
 
-        log("Starting OpenSSH Server")
-        pwsh("Start-Service -Name sshd")
-        pwsh("Set-Service -Name sshd -StartupType Automatic")
-
     except subprocess.CalledProcessError:
         return 1
     except RuntimeError:
