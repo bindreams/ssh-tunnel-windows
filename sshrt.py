@@ -57,23 +57,37 @@ Include __PROGRAMDATA__/SshReverseTunnel/config.d/*
 
 # Run shell commands ===================================================================================================
 def run(command, **kwargs):
-    kwargs["check"] = kwargs.get("check", True)
-    if isinstance(command, list):
-        display_command = " ".join([str(x) for x in command])
-    else:
-        display_command = command
-    print(f"{Fore.WHITE}{Style.BRIGHT}+ {display_command}")
+    kwargs["check"] = kwargs.get("check", True)  # check=True by default
+
+    if not isinstance(command, str):
+        command = subprocess.list2cmdline(str(x) for x in command)
+
+    print(f"{Fore.WHITE}{Style.BRIGHT}+ {command}")
 
     try:
         return subprocess.run(command, **kwargs)
     except subprocess.CalledProcessError:
-        error(f"Script failed while running: {display_command}")
+        error(f"Script failed while running: {command}")
         raise
 
 
-def sudo(command, **kwargs):
-    """Run a command as `NT AUTHORITY\SYSTEM`."""
-    return run([files.psexec, "-nobanner", "-accepteula", "-s"] + command, **kwargs)
+def sudo(command, *, user=None, **kwargs):
+    """Run a command as a different Windows user.
+
+    Default user is "NT Authority\System".
+    """
+    prefix = [str(files.psexec), "-nobanner", "-accepteula"]
+    if user is None:
+        prefix.append("-s")
+    else:
+        prefix.extend(["-u", user])
+
+    if isinstance(command, str):
+        command = f"{subprocess.list2cmdline(prefix)} {command}"
+    else:
+        command = prefix + command
+
+    return run(command, **kwargs)
 
 
 def pwsh(command: str):
@@ -140,15 +154,15 @@ def setpermissions(path, *, extrasids=None):
 
     path = Path(path)
 
-    sudo(["takeown", "/A", "/F", path])  # Administrators group own this
-    run(["icacls.exe", path, "/reset"])
+    run(["takeown", "/A", "/F", path])  # Administrators group own this
+    run(["icacls", path, "/Q", "/reset"])
 
     # Set correct permissions
-    permissions = "F"
+    permissions = "F"  # Full control
     if path.is_dir():
-        permissions = "(OI)(CI)F"
+        permissions = "(OI)(CI)F"  # Full control; propagate this to subdirectories and files
 
-    command = ["icacls.exe", path, "/inheritance:r"]
+    command = ["icacls", path, "/Q", "/inheritance:r"]
     for sid in extrasids:
         command += ["/grant", f"*{sid}:{permissions}"]
 
@@ -220,8 +234,7 @@ def install(tunnel_name):
 
         log("Running the test command")
         try:
-            run(f"{files.psexec} -u \"NT AUTHORITY\\NETWORK SERVICE\" -nobanner -accepteula "
-                f"{config['executable']} {config['testArguments']}", shell=True)
+            sudo(f"{config['executable']} {config['testArguments']}", user="NT Authority\\Network Service", shell=True)
         except subprocess.CalledProcessError:
             error("Service test failed.")
             raise RuntimeError
@@ -312,7 +325,7 @@ def bootstrap(entry_shell=None):
         shutil.rmtree(dirs.temp)
 
         log("Generating host SSH keys")
-        sudo(["ssh-keygen", "-A"])
+        run(["ssh-keygen", "-A"])
         for hostkey in dirs.ssh.glob("ssh_host_*"):
             setpermissions(hostkey)
 
