@@ -37,7 +37,11 @@ Get-Service sshd
 ### 2. Configure public-key based SSH access from A to B
 Generate an RSA key pair on machine A. This key will be used to establish an SSH tunnel, but you will need to test your connection first so place it in your user directory for now. The key should be passwordless, because the reverse tunnel start up automatically and there is no way to enter a password. The following command is an example of how to create a passwordless RSA key and store it in `%USERPROFILE%/.ssh/`:
 ```powershell
+# System PowerShell 5.x and old PowerShell Core (https://github.com/PowerShell/PowerShell/issues/6280)
 ssh-keygen -f "$HOME/.ssh/MachineB.id" -N '""' -t rsa
+
+# Up-to-date PowerShell Core
+ssh-keygen -f "$HOME/.ssh/MachineB.id" -N "" -t rsa
 ```
 After running `ssh-keygen` you will have two key files, with one ending in `.pub`. This is your public key, which you need to append to the end of the `authorized_keys` file on machine B. This file is probably in the following directories:
 
@@ -46,7 +50,7 @@ After running `ssh-keygen` you will have two key files, with one ending in `.pub
 | OS: Linux   | `/root/.ssh/authorized_keys`                       | `/home/<user>/.ssh/authorized_keys`    |
 | OS: Windows | `%ProgramData%/ssh/administrators_authorized_keys` | `C:/Users/<user>/.ssh/authorized_keys` |
 
-Once this is done, add a temporary entry in your config file at `%USERPROFILE%/.ssh/config/`:
+Once this is done, add a temporary entry in your SSH config file at `%USERPROFILE%/.ssh/config` (create a new text file if it does not exist):
 ```
 Host MachineB
 	HostName <machine B IP address>
