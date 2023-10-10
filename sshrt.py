@@ -267,8 +267,8 @@ def install(tunnel_name):
 def bootstrap(entry_shell=None):
     try:
         log("Installing system OpenSSH")
-        pwsh("Add-WindowsCapability -Online -Name OpenSSH.Client")
-        pwsh("Add-WindowsCapability -Online -Name OpenSSH.Server")
+        pwsh("Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0")
+        pwsh("Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0")
 
         firewall_rule_query = pwsh_query("(Get-NetFirewallRule -Name \"OpenSSH-Server-In-TCP\").Enabled")
         if firewall_rule_query.returncode != 0:
