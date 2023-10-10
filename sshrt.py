@@ -74,7 +74,7 @@ def run(command, **kwargs):
 def sudo(command, *, user=None, **kwargs):
     """Run a command as a different Windows user.
 
-    Default user is "NT Authority\System".
+    Default user is "NT Authority\\System".
     """
     prefix = [str(files.psexec), "-nobanner", "-accepteula"]
     if user is None:
@@ -212,7 +212,7 @@ def install(tunnel_name):
         with open(dirs.repo / "service-template.yml") as f:
             template_str = f.read()
 
-        config_str, _ = re.subn("\${TunnelName}", tunnel_name, template_str)
+        config_str, _ = re.subn(r"\${TunnelName}", tunnel_name, template_str)
         config = yaml.safe_load(config_str)
 
         service_exists_query = pwsh_query(f"Get-Service -Name {config['id']}")
