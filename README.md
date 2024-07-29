@@ -230,6 +230,16 @@ TCPKeepAlive yes
 ```
 The first two entries directly mirror `ServerAliveInterval` and `ServerAliveCountMax`, so in this case the delay between a dead connection and a killed off process is 10*3=30 seconds. The latter, `TCPKeepAlive` uses a different mechanism that can be omitted if you'd like. Consult [`man sshd_config`](https://linux.die.net/man/5/sshd_config) for more information.
 
+## Star History
+
+<a href="https://star-history.com/#bindreams/ssh-tunnel-windows&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=bindreams/ssh-tunnel-windows&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=bindreams/ssh-tunnel-windows&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=bindreams/ssh-tunnel-windows&type=Date" />
+ </picture>
+</a>
+
 ## License
 <img align="right" src="https://www.gnu.org/graphics/gplv3-with-text-136x68.png">
 
